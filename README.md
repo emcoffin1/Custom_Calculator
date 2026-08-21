@@ -37,7 +37,7 @@ git pull
 
 `install.sh` creates a desktop launcher and the command `~/.local/bin/conversions-calculator`; it does not copy the source tree, so a later `git pull` updates the installed application immediately. If dependencies are already present, run `./install.sh` without `--install-deps`.
 
-Required runtime packages are Python 3, PyGObject, GTK 3, and WebKitGTK 4.1. On non-apt distributions, install their equivalent packages and run `./launch.sh` directly.
+Required runtime packages are Python 3, PyGObject, GTK 3, and WebKitGTK 4.0 or 4.1. The launcher selects an available WebKitGTK API automatically. On non-apt distributions, install the equivalent packages and run `./launch.sh` directly.
 
 Press Escape or click `×` to exit. Use Ctrl+Tab to switch tabs.
 

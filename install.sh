@@ -14,7 +14,12 @@ if [[ "${1:-}" == "--install-deps" ]]; then
         exit 1
     fi
     sudo apt-get update
-    sudo apt-get install -y python3 python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1
+    if apt-cache show gir1.2-webkit2-4.1 >/dev/null 2>&1; then
+        webkit_package=gir1.2-webkit2-4.1
+    else
+        webkit_package=gir1.2-webkit2-4.0
+    fi
+    sudo apt-get install -y python3 python3-gi gir1.2-gtk-3.0 "$webkit_package"
 fi
 
 if ! "$APP_DIR/launch.sh" --diagnostics >/dev/null 2>&1; then

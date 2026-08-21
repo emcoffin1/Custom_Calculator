@@ -1,0 +1,97 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><script src="mathlive.min.js"></script>
+<style>
+html,body { margin:0; height:100%; overflow:hidden; background:#2e2e2e; color:white; }
+body { display:flex; align-items:center; padding:0 12px; box-sizing:border-box; }
+math-field { width:100%; min-height:78px; box-sizing:border-box; padding:10px 12px; border:0; border-radius:8px;
+  background:#2e2e2e; color:white; font-size:28px; outline:none; --caret-color:#fff;
+  --selection-background-color:#587aa5; --contains-highlight-background-color:#3d526b; }
+math-field::part(virtual-keyboard-toggle), math-field::part(menu-toggle) { display:none; }
+</style></head><body><math-field id="field"></math-field><math-field id="semantic-field" style="display:none"></math-field>
+<script>
+const field=document.getElementById('field'); field.mathVirtualKeyboardPolicy='manual'; field.smartFence=true;
+field.macros={...field.macros,
+  defint:{args:3,def:'\\displaystyle\\int_{#2}^{#3}#1\\,\\mathrm{d}x',captureSelection:false},
+  pointderiv:{args:2,def:'\\displaystyle\\left.\\frac{\\mathrm{d}}{\\mathrm{d}x}#1\\right|_{x=#2}',captureSelection:false},
+  finsum:{args:3,def:'\\displaystyle\\sum_{x=#2}^{#3}#1',captureSelection:false}
+};
+const semanticField=document.getElementById('semantic-field'); semanticField.macros=field.macros;
+field.inlineShortcuts={...field.inlineShortcuts,
+  sqrt:'\\sqrt{#0}', cbrt:'\\sqrt[3]{#0}', root:'\\sqrt[#0]{#1}', frac:'\\frac{#0}{#1}',
+  integral:'\\int_{#1}^{#2}#0\\,\\mathrm{d}x', derivative:'\\left.\\frac{\\mathrm{d}}{\\mathrm{d}x}#0\\right|_{x=#1}',
+  sum:'\\sum_{x=#1}^{#2}#0', fact:'\\operatorname{factorial}(#0)'};
+function groupAt(source,pos){
+  while(source[pos]===' ')pos++; if(source[pos]!=='{')return null;
+  let start=++pos,depth=1;
+  while(pos<source.length&&depth){if(source[pos]==='{')depth++;else if(source[pos]==='}')depth--;pos++}
+  return depth?null:{value:source.slice(start,pos-1),end:pos};
+}
+function atomAt(source,pos){
+  while(source[pos]===' ')pos++; if(source[pos]==='{')return groupAt(source,pos);
+  let start=pos;
+  if(source[pos]==='-'||source[pos]==='+')pos++;
+  if(source[pos]==='\\'){pos++;while(/[A-Za-z]/.test(source[pos]||''))pos++}
+  else if(/[0-9.]/.test(source[pos]||''))while(/[0-9.]/.test(source[pos]||''))pos++;
+  else while(/[A-Za-z]/.test(source[pos]||''))pos++;
+  return pos===start?null:{value:source.slice(start,pos),end:pos};
+}
+function visualCalculus(source){
+  let text=source.trim();
+  if(text.startsWith('\\int_')){
+    let lower=atomAt(text,text.indexOf('_')+1); if(!lower)return source;
+    let caret=text.indexOf('^',lower.end),upper=atomAt(text,caret+1); if(!upper)return source;
+    let end=text.lastIndexOf('\\mathrm{d}x'); if(end<0)end=text.lastIndexOf('dx'); if(end<0)return source;
+    let body=text.slice(upper.end,end).replace(/\\,\s*$/,'').trim();
+    return '\\operatorname{integral}('+body+','+lower.value+','+upper.value+')';
+  }
+  const derivative='\\frac{\\mathrm{d}}{\\mathrm{d}x}';
+  if(text.includes(derivative)){
+    let start=text.indexOf(derivative)+derivative.length,end=text.lastIndexOf('\\right|_{x=');
+    if(end<0)return source; let point=atomAt(text,end+'\\right|_'.length); if(!point)return source;
+    return '\\operatorname{derivative}('+text.slice(start,end).trim()+','+point.value.replace(/^x=/,'')+')';
+  }
+  if(text.startsWith('\\sum_')){
+    let lower=atomAt(text,text.indexOf('_')+1); if(!lower)return source;
+    let caret=text.indexOf('^',lower.end),upper=atomAt(text,caret+1); if(!upper)return source;
+    return '\\operatorname{summation}('+text.slice(upper.end).trim()+','+lower.value.replace(/^x=/,'')+','+upper.value+')';
+  }
+  return source;
+}
+function semanticLatex(source,name,count,replacement){
+  const marker='\\'+name; let at=source.indexOf(marker);
+  while(at>=0){
+    let cursor=at+marker.length,args=[],valid=true;
+    for(let n=0;n<count;n++){
+      while(source[cursor]===' ')cursor++;
+      if(source[cursor]!=='{'){valid=false;break}
+      let start=++cursor,depth=1;
+      while(cursor<source.length&&depth){if(source[cursor]==='{')depth++;else if(source[cursor]==='}')depth--;cursor++}
+      if(depth){valid=false;break} args.push(source.slice(start,cursor-1));
+    }
+    if(!valid)break;
+    source=source.slice(0,at)+replacement(args)+source.slice(cursor); at=source.indexOf(marker,at+1);
+  }
+  return source;
+}
+function notify(){
+  let latex=field.value;
+  latex=visualCalculus(latex);
+  latex=semanticLatex(latex,'defint',3,a=>'\\operatorname{integral}('+a[0]+','+a[1]+','+a[2]+')');
+  latex=semanticLatex(latex,'pointderiv',2,a=>'\\operatorname{derivative}('+a[0]+','+a[1]+')');
+  latex=semanticLatex(latex,'finsum',3,a=>'\\operatorname{summation}('+a[0]+','+a[1]+','+a[2]+')');
+  semanticField.value=latex;
+  let value=semanticField.getValue('ascii-math');
+  value=value.replaceAll('i n t e g r a l','integral').replaceAll('d e r i v a t i v e','derivative')
+    .replaceAll('s u m m a t i o n','summation').replaceAll('f a c t o r i a l','factorial');
+  window.webkit.messageHandlers.changed.postMessage(value);
+}
+field.addEventListener('input',notify);
+field.addEventListener('keydown',event=>{
+  if(event.key==='Enter'){ event.preventDefault(); notify(); window.webkit.messageHandlers.activate.postMessage(''); }
+});
+function insertMath(latex){ field.focus(); field.insert(latex,{format:'latex',selectionMode:'placeholder'}); notify(); }
+function moveSlot(direction){ field.focus(); field.executeCommand(direction>0?'moveToNextPlaceholder':'moveToPreviousPlaceholder'); notify(); }
+function undoMath(){ field.focus(); field.executeCommand('undo'); notify(); }
+function setValue(value){ field.setValue(value,{silenceNotifications:true}); notify(); }
+function focusMath(){ field.focus(); }
+</script></body></html>

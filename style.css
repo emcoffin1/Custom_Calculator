@@ -1,0 +1,76 @@
+#calculator_window { background-color: #1e1e1e; border-radius: 12px; }
+.window-title { color: #ffffff; font-size: 18px; font-weight: bold; }
+.resize-grip { color: #666666; font-size: 13px; padding: 0 1px 1px 8px; }
+.resize-grip:hover { color: #aaaaaa; }
+.utility-button { padding: 2px 8px; min-height: 18px; font-size: 14px; }
+/* Popovers are separate GTK popup windows, so they do not inherit the
+   calculator window's dark background automatically. */
+popover.background,
+popover.background contents,
+popover.background box,
+popover.background list,
+popover.background listbox,
+popover.background row {
+    background-color: #242424;
+    color: #ffffff;
+}
+popover.background contents {
+    border: 1px solid #444444;
+    border-radius: 8px;
+}
+popover.background row:hover,
+popover.background row:selected {
+    background-color: #3e3e3e;
+    color: #ffffff;
+}
+popover.background label { color: #ffffff; }
+popover.background .hint { color: #aaaaaa; }
+#close_button { background: transparent; color: #bbbbbb; border: 0; font-size: 20px; padding: 2px 8px; }
+#close_button:hover { color: #ffffff; background-color: #3e3e3e; }
+#calculator_window, #main_notebook, #main_notebook stack, #main_notebook > stack,
+#main_notebook viewport, #main_notebook scrolledwindow { background-color: #1e1e1e; color: #ffffff; }
+#main_notebook { background-color: #1e1e1e; border: 0; }
+#main_notebook header { background-color: #1e1e1e; border: 0; }
+#main_notebook tab { background-color: #2e2e2e; color: #bdbdbd; border-radius: 8px 8px 0 0; padding: 9px 24px; }
+#main_notebook tab:checked { background-color: #3e3e3e; color: #ffffff; }
+entry, combobox button { background-color: #2e2e2e; color: #ffffff; border: 1px solid #444444; border-radius: 8px; padding: 10px; }
+combobox button box, combobox button cellview, combobox button arrow { background-color: transparent; color: #ffffff; }
+entry selection { background-color: #587aa5; color: #ffffff; }
+entry.invalid-entry { border-color: #a85f5f; box-shadow: 0 0 0 1px #a85f5f; }
+.compact-button { padding: 5px 8px; font-size: 12px; }
+.wire-chart { background-color: #242424; color: #ffffff; padding: 4px; }
+#expression_entry, #advanced_entry { font-size: 20px; }
+#math_editor { background-color: #2e2e2e; border: 1px solid #444444; border-radius: 8px; }
+.result { color: #ffffff; font-size: 30px; padding: 8px; }
+.hint { color: #aaaaaa; font-size: 11px; }
+.field-label { color: #d0d0d0; font-size: 12px; font-weight: bold; }
+.conversion-result { color: #ffffff; font-size: 24px; padding: 15px 4px; }
+.engineering-formula { color: #ffffff; font-size: 18px; font-weight: bold; padding: 6px 2px; }
+.engineering-description { color: #dddddd; font-size: 12px; }
+.reference { color: #7896b8; font-size: 10px; }
+#engineering_info { background-color: #292929; border: 1px solid #3d3d3d; border-radius: 8px; padding: 8px; }
+.engineering-result { color: #ffffff; font-size: 20px; font-weight: bold; padding: 8px 2px; }
+.engineering-result.live-result { color: #70d987; }
+.engineering-result.neutral-result { color: #555555; }
+.engineering-result.error-result { color: #cf7777; }
+.engineering-warning { color: #d0aa65; font-size: 11px; padding: 2px 0; }
+.prop-result { color: #ffffff; font-size: 16px; padding: 8px 2px; }
+button { background-image: none; background-color: #2e2e2e; color: #ffffff; border: 1px solid #444444; border-radius: 8px; padding: 10px; font-size: 15px; }
+button:hover { background-color: #3e3e3e; }
+button:active { background-color: #505050; }
+button.operator { background-color: #3d526b; }
+button.operator:hover { background-color: #4c6787; }
+menu, window.popup menu { background-color: #2e2e2e; color: #ffffff; }
+menuitem { background-color: transparent; color: #ffffff; border-radius: 5px; }
+menuitem box, menuitem cellview, menuitem label,
+menuitem:hover box, menuitem:hover cellview, menuitem:hover label,
+menuitem:checked box, menuitem:checked cellview, menuitem:checked label {
+    background-color: transparent;
+    color: #ffffff;
+}
+menuitem:hover, menuitem:checked { background-color: #3e3e3e; color: #ffffff; }
+treeview.view { background-color: #2e2e2e; color: #ffffff; }
+treeview.view:selected, treeview.view:selected:focus {
+    background-color: #3e3e3e;
+    color: #ffffff;
+}

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Conversions Calculator
+Comment=Calculator, unit converter, and engineering reference
+Exec="@APP_DIR@/launch.sh"
+Icon=accessories-calculator
+Terminal=false
+Categories=Utility;Calculator;Engineering;
+StartupNotify=true
+

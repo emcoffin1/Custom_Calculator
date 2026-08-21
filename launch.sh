@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
-APP_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+APP_SCRIPT="$(readlink -f -- "${BASH_SOURCE[0]}")"
+APP_DIR="$(cd -- "$(dirname -- "$APP_SCRIPT")" && pwd)"
 if ! command -v python3 >/dev/null 2>&1; then
     echo "conversions-calculator: python3 is required" >&2
     exit 1

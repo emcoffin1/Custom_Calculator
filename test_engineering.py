@@ -1,6 +1,6 @@
 import math
 import unittest
-from engineering import best_unit, calculations_for, from_base, network_equivalents, nozzle_exit_state, pcb_width, presets_for, rc_filter_response, recommend_awg, series_rlc_response, standard_atmosphere, to_base, warnings_for, wire_drop, wire_gauge_chart
+from engineering import best_unit, calculations_for, from_base, network_equivalents, nozzle_exit_state, pcb_width, presets_for, rc_filter_response, recommend_awg, series_rlc_response, standard_atmosphere, to_base, wardogs_solution, warnings_for, wire_drop, wire_gauge_chart
 
 class EngineeringTests(unittest.TestCase):
     def test_automatic_si_unit_scaling(self):
@@ -46,6 +46,14 @@ class EngineeringTests(unittest.TestCase):
         state=nozzle_exit_state(500000,1000,100000,1.4,287)
         self.assertGreater(state["mach"],1);self.assertGreater(state["velocity"],0)
         sea=standard_atmosphere(0);self.assertAlmostEqual(sea["pressure"],101325);self.assertAlmostEqual(sea["temperature"],288.15)
+    def test_wardogs_distance_and_angle(self):
+        result=wardogs_solution(1,2,4,6)
+        self.assertEqual(result["distance"],5)
+        self.assertAlmostEqual(result["angle_deg"],90-math.degrees(math.atan2(4,3)))
+        self.assertEqual(wardogs_solution(0,0,0,1)["angle_deg"],0)
+        self.assertEqual(wardogs_solution(0,0,1,0)["angle_deg"],90)
+        self.assertEqual(wardogs_solution(0,0,0,-1)["angle_deg"],180)
+        self.assertEqual(wardogs_solution(0,0,-1,0)["angle_deg"],270)
     def calculation(self, discipline, name):
         return next(item for item in calculations_for(discipline) if item.name == name)
     def test_ohms_law_with_milliamps_and_kilohms(self):

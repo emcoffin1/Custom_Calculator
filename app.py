@@ -15,7 +15,7 @@ from gi.repository import Gdk, GLib, GObject, Gtk, Pango
 from calculator import evaluate, format_engineering, format_measurement, format_number
 from components import preferred_summary
 from conversions import CATEGORIES, convert, parse_conversion_input
-from engineering import AUTO_UNIT, DISCIPLINES, UNITS, best_unit, calculations_for, description_for, from_base, network_equivalents, nozzle_exit_state, pcb_width, presets_for, rc_filter_response, reference_for, series_rlc_response, standard_atmosphere, to_base as engineering_to_base, validate_inputs, warnings_for, wire_drop, wire_gauge_chart
+from engineering import AUTO_UNIT, DISCIPLINES, UNITS, best_unit, calculations_for, description_for, from_base, network_equivalents, nozzle_exit_state, pcb_width, presets_for, rc_filter_response, reference_for, series_rlc_response, standard_atmosphere, to_base as engineering_to_base, validate_inputs, wardogs_solution, warnings_for, wire_drop, wire_gauge_chart
 from features import HistoryEntry, add_history, is_favorite, normalize_state, normalized_precision, search_items, toggle_favorite
 from math_editor import MathEditor
 from quantities import parse_any_quantity, parse_quantity as parse_engineering_quantity
@@ -26,7 +26,7 @@ CONFIG_HOME = os.environ.get("XDG_CONFIG_HOME", os.path.join(os.path.expanduser(
 DEFAULT_STATE_FILE = os.path.join(CONFIG_HOME, "conversions-calculator", "state.json")
 STATE_FILE = os.environ.get("CONVERSIONS_CALCULATOR_STATE", DEFAULT_STATE_FILE)
 LEGACY_STATE_FILE = os.path.join(APP_DIR, "state.json")
-CUSTOM_LIVE_CALCULATIONS = {"PCB traces", "Wire sizing & voltage drop", "Isentropic flow", "Series / parallel resistance", "Series / parallel capacitance", "Series / parallel inductance", "Series / parallel thermal resistance", "Preferred resistor value", "Preferred capacitor value", "Series RLC impedance", "RC filter response", "Nozzle exit state", "Standard atmosphere"}
+CUSTOM_LIVE_CALCULATIONS = {"PCB traces", "Wire sizing & voltage drop", "Isentropic flow", "Series / parallel resistance", "Series / parallel capacitance", "Series / parallel inductance", "Series / parallel thermal resistance", "Preferred resistor value", "Preferred capacitor value", "Series RLC impedance", "RC filter response", "Nozzle exit state", "Standard atmosphere", "WarDogs"}
 ENGINEERING_GROUPS = ("Favorites",) + tuple(DISCIPLINES)
 RESERVED_MATH_NAMES = {"pi","e","x","sqrt","cbrt","root","factorial","sin","cos","tan","asin","acos","atan","ln","log","log10","log2","logbase","exp","abs","floor","ceil","degrees","radians","gcd","integral","derivative","summation"}
 
@@ -564,6 +564,12 @@ class CalculatorWindow(Gtk.Window):
             for entry,_unit,_spec in self.engineering_fields.values():
                 entry.get_style_context().remove_class("invalid-entry");entry.set_tooltip_text(None)
             calculation = self.current_engineering_calculation
+            if calculation.name == "WarDogs":
+                if any(not entry.get_text().strip() for entry,_unit,_spec in self.engineering_fields.values()):
+                    self.set_engineering_result("Enter all Mortar and Target coordinates", "neutral");return
+                values={key:self.to_base(entry.get_text(),spec.dimension,unit.get_active_text()) for key,(entry,unit,spec) in self.engineering_fields.items()}
+                result=wardogs_solution(values["mortar_x"],values["mortar_y"],values["target_x"],values["target_y"])
+                self.set_engineering_result(f"Distance: {self.fmt_measurement(result['distance'])}\nBearing: {self.fmt_measurement(result['angle_deg'])}°", "live");return
             if calculation.name in ("Series / parallel resistance","Series / parallel capacitance","Series / parallel inductance","Series / parallel thermal resistance"):
                 entry,unit_widget,spec=self.engineering_fields["values"];parts=[part.strip() for part in re.split(r"[,;\n]+",entry.get_text()) if part.strip()]
                 if len(parts)<2:self.set_engineering_result("Enter at least two values", "neutral");return

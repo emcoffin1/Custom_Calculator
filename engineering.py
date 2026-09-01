@@ -133,6 +133,12 @@ def standard_atmosphere(altitude):
     temperature=288.15-.0065*altitude;pressure=101325*(temperature/288.15)**(9.80665/(.0065*287.05287));density=pressure/(287.05287*temperature)
     return {"temperature":temperature,"pressure":pressure,"density":density,"sound_speed":math.sqrt(1.4*287.05287*temperature)}
 
+def wardogs_solution(mortar_x, mortar_y, target_x, target_y):
+    """Return distance and a north-zero clockwise bearing from Mortar to Target."""
+    dx=target_x-mortar_x;dy=target_y-mortar_y
+    cartesian_angle=math.degrees(math.atan2(dy,dx))
+    return {"distance":math.hypot(dx,dy),"angle_deg":(90-cartesian_angle)%360}
+
 CALCULATIONS = [
  C("Electrical","Ohm’s law","V = I × R",[I("v","Voltage","voltage"),I("i","Current","current"),I("r","Resistance","resistance")],"Voltage","voltage",lambda v:v["i"]*v["r"],solvers={"v":lambda v:v["i"]*v["r"],"i":lambda v:v["v"]/v["r"],"r":lambda v:v["v"]/v["i"]}),
  C("Electrical","DC power","P = V × I",[I("p","Power","power"),I("v","Voltage","voltage"),I("i","Current","current")],"Power","power",lambda v:v["v"]*v["i"],solvers={"p":lambda v:v["v"]*v["i"],"v":lambda v:v["p"]/v["i"],"i":lambda v:v["p"]/v["v"]}),
@@ -214,6 +220,7 @@ CALCULATIONS = [
  C("General","Linear interpolation","y = y₁+(x−x₁)(y₂−y₁)/(x₂−x₁)",[I("x","x"),I("x1","x₁"),I("y1","y₁"),I("x2","x₂"),I("y2","y₂")],"Interpolated value","none",lambda v:v["y1"]+(v["x"]-v["x1"])*(v["y2"]-v["y1"])/(v["x2"]-v["x1"])),
  C("General","Vector magnitude","|v| = √(x²+y²+z²)",[I("x","x component"),I("y","y component"),I("z","z component","none","0")],"Magnitude","none",lambda v:math.sqrt(v["x"]**2+v["y"]**2+v["z"]**2)),
  C("General","Circle area","A = πr²",[I("a","Area","area"),I("r","Radius","length")],"Area","area",lambda v:math.pi*v["r"]**2,solvers={"a":lambda v:math.pi*v["r"]**2,"r":lambda v:math.sqrt(v["a"]/math.pi)}),
+ C("General","WarDogs","d = √((xₜ−xₘ)²+(yₜ−yₘ)²); bearing = 90° − atan2(yₜ−yₘ, xₜ−xₘ)",[I("mortar_x","Mortar X"),I("mortar_y","Mortar Y"),I("target_x","Target X"),I("target_y","Target Y")],"Distance and bearing","none",lambda v:wardogs_solution(v["mortar_x"],v["mortar_y"],v["target_x"],v["target_y"])["distance"],"Compass bearing is measured clockwise from North and normalized to 0–360°."),
  C("Propulsion","Isentropic flow","Ideal-gas static/total and area relations",[I("mach","Mach number","none","2"),I("gamma","Specific-heat ratio γ","none","1.4"),I("temperature","Total temperature Tₜ (K)","none","300"),I("pressure","Total pressure","pressure","1","bar"),I("gas_constant","Gas constant R (J/kg·K)","none","287.05")],"Flow properties","none",lambda v:0,"Calorically perfect gas, steady adiabatic reversible flow; equations follow NASA Glenn isentropic relations."),
  C("Propulsion","Rocket thrust","F = ṁVe + (Pe−Pa)Ae",[I("mass_flow","Propellant mass flow","mass_flow"),I("velocity","Exit velocity","speed"),I("exit_pressure","Exit pressure","pressure"),I("ambient_pressure","Ambient pressure","pressure","101.325","kPa"),I("exit_area","Exit area","area")],"Thrust","force",lambda v:v["mass_flow"]*v["velocity"]+(v["exit_pressure"]-v["ambient_pressure"])*v["exit_area"],"Steady one-dimensional gross momentum and pressure thrust."),
  C("Propulsion","Specific impulse","Isp = F/(ṁg₀)",[I("thrust","Thrust","force"),I("mass_flow","Propellant mass flow","mass_flow")],"Specific impulse","time",lambda v:v["thrust"]/(v["mass_flow"]*9.80665)),

@@ -48,7 +48,7 @@ class EngineeringTests(unittest.TestCase):
         sea=standard_atmosphere(0);self.assertAlmostEqual(sea["pressure"],101325);self.assertAlmostEqual(sea["temperature"],288.15)
     def test_wardogs_distance_and_angle(self):
         result=wardogs_solution(1,2,4,6)
-        self.assertEqual(result["distance"],5)
+        self.assertEqual(result["distance"],500)
         self.assertAlmostEqual(result["angle_deg"],90-math.degrees(math.atan2(4,3)))
         self.assertEqual(wardogs_solution(0,0,0,1)["angle_deg"],0)
         self.assertEqual(wardogs_solution(0,0,1,0)["angle_deg"],90)

@@ -569,7 +569,7 @@ class CalculatorWindow(Gtk.Window):
                     self.set_engineering_result("Enter all Mortar and Target coordinates", "neutral");return
                 values={key:self.to_base(entry.get_text(),spec.dimension,unit.get_active_text()) for key,(entry,unit,spec) in self.engineering_fields.items()}
                 result=wardogs_solution(values["mortar_x"],values["mortar_y"],values["target_x"],values["target_y"])
-                self.set_engineering_result(f"Distance: {self.fmt_measurement(result['distance'], 'm')} m\nBearing: {self.fmt_measurement(result['angle_deg'])}°", "live");return
+                self.set_engineering_result(f"Distance: {self.fmt_measurement(result['distance'], 'm')} m\nBearing: {self.fmt_measurement(result['angle_deg'])}°\nBearing: {self.fmt_measurement(result['angle_mils'])} mils", "live");return
             if calculation.name in ("Series / parallel resistance","Series / parallel capacitance","Series / parallel inductance","Series / parallel thermal resistance"):
                 entry,unit_widget,spec=self.engineering_fields["values"];parts=[part.strip() for part in re.split(r"[,;\n]+",entry.get_text()) if part.strip()]
                 if len(parts)<2:self.set_engineering_result("Enter at least two values", "neutral");return

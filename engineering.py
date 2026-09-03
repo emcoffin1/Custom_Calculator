@@ -137,7 +137,8 @@ def wardogs_solution(mortar_x, mortar_y, target_x, target_y):
     """Return meter distance (100 m per coordinate unit) and compass bearing."""
     dx=target_x-mortar_x;dy=target_y-mortar_y
     cartesian_angle=math.degrees(math.atan2(dy,dx))
-    return {"distance":math.hypot(dx,dy)*100,"angle_deg":(90-cartesian_angle)%360}
+    angle_deg=(90-cartesian_angle)%360
+    return {"distance":math.hypot(dx,dy)*100,"angle_deg":angle_deg,"angle_mils":angle_deg*6400/360}
 
 CALCULATIONS = [
  C("Electrical","Ohm’s law","V = I × R",[I("v","Voltage","voltage"),I("i","Current","current"),I("r","Resistance","resistance")],"Voltage","voltage",lambda v:v["i"]*v["r"],solvers={"v":lambda v:v["i"]*v["r"],"i":lambda v:v["v"]/v["r"],"r":lambda v:v["v"]/v["i"]}),

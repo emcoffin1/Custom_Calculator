@@ -50,8 +50,10 @@ class EngineeringTests(unittest.TestCase):
         result=wardogs_solution(1,2,4,6)
         self.assertEqual(result["distance"],500)
         self.assertAlmostEqual(result["angle_deg"],90-math.degrees(math.atan2(4,3)))
+        self.assertAlmostEqual(result["angle_mils"],result["angle_deg"]*6400/360)
         self.assertEqual(wardogs_solution(0,0,0,1)["angle_deg"],0)
         self.assertEqual(wardogs_solution(0,0,1,0)["angle_deg"],90)
+        self.assertEqual(wardogs_solution(0,0,1,0)["angle_mils"],1600)
         self.assertEqual(wardogs_solution(0,0,0,-1)["angle_deg"],180)
         self.assertEqual(wardogs_solution(0,0,-1,0)["angle_deg"],270)
     def calculation(self, discipline, name):

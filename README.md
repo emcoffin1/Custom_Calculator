@@ -1,14 +1,18 @@
 # Conversions Calculator
 
-A small, on-demand GTK 3 calculator for Linux desktops. It runs natively through GTK on KDE Plasma Wayland and on X11 desktops such as Linux Mint Cinnamon. It provides arithmetic, algebra/calculus, engineering calculations, and unit conversion.
+A small, on-demand GTK 3 calculator for Windows and Linux desktops. On Linux it runs natively on KDE Plasma Wayland and X11 desktops such as Linux Mint Cinnamon. It provides arithmetic, algebra/calculus, engineering calculations, and unit conversion.
 
 The Basic tab is a structured scientific/algebra calculator. The Advanced tab adds numerical definite integrals, derivatives at a point, and finite summations using `x` as their expression variable. Advanced calculus expressions are displayed in textbook notation—with limits around `∫` and `Σ`, `dx`, and a stacked derivative—while a hidden semantic translation is used for evaluation. Both tabs use real editable math slots, arrow navigation, Ctrl+Z/`↶` undo, and hover hints for typed shortcuts.
 
 ## Run it
 
+On Linux:
+
 ```bash
 ~/.config/conversions_calculator/launch.sh
 ```
+
+On Windows, open **Conversions Calculator** from the Start menu or double-click `launch_windows.bat`.
 
 The repository can be cloned anywhere; runtime state is kept outside the checkout at:
 
@@ -19,6 +23,21 @@ ${XDG_CONFIG_HOME:-~/.config}/conversions-calculator/state.json
 An existing `state.json` beside `app.py` is read once as a migration source, so current settings are retained after updating.
 
 ## Clone and install
+
+### Windows 10/11
+
+Install [MSYS2](https://www.msys2.org/) in its default `C:\msys64` location, then open PowerShell in the cloned repository and run:
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+.\install_windows.ps1
+```
+
+The installer adds the required Python/PyGObject/GTK 3 packages and creates a **Conversions Calculator** Start menu shortcut. You can also start it by double-clicking `launch_windows.bat`. Settings are stored under `%LOCALAPPDATA%\conversions-calculator\state.json`.
+
+Windows uses the built-in GTK math editor because WebKitGTK is not available in the native MSYS2 Windows repository. It supports the same calculator operations and buttons; Linux uses the richer MathLive editor when WebKitGTK is installed.
+
+### Linux
 
 On Linux Mint, Ubuntu, Kubuntu, or KDE neon:
 
@@ -37,7 +56,7 @@ git pull
 
 `install.sh` creates a desktop launcher and the command `~/.local/bin/conversions-calculator`; it does not copy the source tree, so a later `git pull` updates the installed application immediately. If dependencies are already present, run `./install.sh` without `--install-deps`.
 
-Required runtime packages are Python 3, PyGObject, GTK 3, and WebKitGTK 4.0 or 4.1. The launcher selects an available WebKitGTK API automatically. On non-apt distributions, install the equivalent packages and run `./launch.sh` directly.
+Required Linux runtime packages are Python 3, PyGObject, GTK 3, and WebKitGTK 4.0 or 4.1. The Linux launcher selects an available WebKitGTK API automatically. On non-apt distributions, install the equivalent packages and run `./launch.sh` directly. Windows requires Python, PyGObject, and GTK 3; its native editor does not require WebKitGTK.
 
 Press Escape or click `×` to exit. Use Ctrl+Tab to switch tabs.
 

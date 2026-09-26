@@ -4,10 +4,19 @@ import json
 import math
 import os
 import signal
-import fcntl
 import re
 import sys
+import tempfile
+import getpass
 from itertools import product
+try:
+    import fcntl
+except ImportError:  # Windows
+    fcntl = None
+try:
+    import msvcrt
+except ImportError:  # POSIX
+    msvcrt = None
 import gi
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
@@ -22,7 +31,10 @@ from quantities import parse_any_quantity, parse_quantity as parse_engineering_q
 from unit_math import contains_unit, evaluate_unit_expression
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
-CONFIG_HOME = os.environ.get("XDG_CONFIG_HOME", os.path.join(os.path.expanduser("~"), ".config"))
+if os.name == "nt":
+    CONFIG_HOME = os.environ.get("LOCALAPPDATA", os.environ.get("APPDATA", os.path.expanduser("~")))
+else:
+    CONFIG_HOME = os.environ.get("XDG_CONFIG_HOME", os.path.join(os.path.expanduser("~"), ".config"))
 DEFAULT_STATE_FILE = os.path.join(CONFIG_HOME, "conversions-calculator", "state.json")
 STATE_FILE = os.environ.get("CONVERSIONS_CALCULATOR_STATE", DEFAULT_STATE_FILE)
 LEGACY_STATE_FILE = os.path.join(APP_DIR, "state.json")
@@ -66,11 +78,69 @@ class ClickOnlyComboBoxText(Gtk.Overlay):
         return self.combo.grab_focus()
 
 
+class InstanceLock:
+    """Owned process lock, including Windows' file-lock release semantics."""
+
+    def __init__(self, lock_file, toggle_path=None):
+        self.lock_file = lock_file
+        self.toggle_path = toggle_path
+        self.toggle_token = self._toggle_token()
+
+    def _toggle_token(self):
+        try:
+            return os.stat(self.toggle_path).st_mtime_ns
+        except (OSError, TypeError):
+            return None
+
+    def toggle_requested(self):
+        token = self._toggle_token()
+        if token is not None and token != self.toggle_token:
+            self.toggle_token = token
+            return True
+        return False
+
+    def close(self):
+        if os.name == "nt" and msvcrt is not None:
+            try:
+                self.lock_file.seek(0)
+                msvcrt.locking(self.lock_file.fileno(), msvcrt.LK_UNLCK, 1)
+            except OSError:
+                pass
+        self.lock_file.close()
+
+
+def _runtime_paths():
+    runtime_dir = os.environ.get("XDG_RUNTIME_DIR") if os.name != "nt" else None
+    runtime_dir = runtime_dir or tempfile.gettempdir()
+    if hasattr(os, "getuid"):
+        user_key = str(os.getuid())
+    else:
+        user_key = re.sub(r"[^A-Za-z0-9_.-]", "_", getpass.getuser())
+    stem = os.path.join(runtime_dir, f"conversions-calculator-{user_key}")
+    return stem + ".lock", stem + ".toggle"
+
+
 def toggle_existing_instance():
-    """Return an owned lock, or signal the running instance and return None."""
-    runtime_dir = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
-    lock_path = os.path.join(runtime_dir, f"conversions-calculator-{os.getuid()}.lock")
-    lock_file = open(lock_path, "a+", encoding="utf-8")
+    """Return an owned lock, or ask the running instance to close."""
+    lock_path, toggle_path = _runtime_paths()
+    lock_file = open(lock_path, "a+b")
+    if os.name == "nt":
+        # msvcrt locks a byte range and requires that range to exist.
+        lock_file.seek(0, os.SEEK_END)
+        if lock_file.tell() == 0:
+            lock_file.write(b"0"); lock_file.flush()
+        lock_file.seek(0)
+        try:
+            msvcrt.locking(lock_file.fileno(), msvcrt.LK_NBLCK, 1)
+        except OSError:
+            lock_file.close()
+            try:
+                with open(toggle_path, "w", encoding="ascii") as request:
+                    request.write(str(os.getpid()))
+            except OSError:
+                pass
+            return None
+        return InstanceLock(lock_file, toggle_path)
     try:
         fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except BlockingIOError:
@@ -82,8 +152,8 @@ def toggle_existing_instance():
             pass
         lock_file.close()
         return None
-    lock_file.seek(0); lock_file.truncate(); lock_file.write(str(os.getpid())); lock_file.flush()
-    return lock_file
+    lock_file.seek(0); lock_file.truncate(); lock_file.write(str(os.getpid()).encode("ascii")); lock_file.flush()
+    return InstanceLock(lock_file)
 
 class CalculatorWindow(Gtk.Window):
     def __init__(self):
@@ -987,7 +1057,8 @@ def main():
     if "--diagnostics" in sys.argv:
         state=CalculatorWindow.load_state(None)
         print(f"GTK {Gtk.get_major_version()}.{Gtk.get_minor_version()}.{Gtk.get_micro_version()}")
-        display=Gdk.Display.get_default();print(f"Session: {'Wayland' if is_wayland_session() else 'X11/other'} · display {display.get_name() if display else 'unavailable'}")
+        display=Gdk.Display.get_default();session = "Windows" if os.name == "nt" else ("Wayland" if is_wayland_session() else "X11/other")
+        print(f"Session: {session} · display {display.get_name() if display else 'unavailable'}")
         print(f"State file: {STATE_FILE}")
         print(f"Calculations: {sum(len(calculations_for(name)) for name in DISCIPLINES)}")
         print(f"State: readable · history {len(state.get('history',[]))} · favorites {len(state.get('favorites',[]))}")
@@ -998,9 +1069,18 @@ def main():
     window = CalculatorWindow()
     def request_close(_signal, _frame):
         GLib.idle_add(window.close)
-    signal.signal(signal.SIGUSR1, request_close)
-    signal.signal(signal.SIGTERM, request_close)
-    signal.signal(signal.SIGINT, request_close)
+    if hasattr(signal, "SIGUSR1"):
+        signal.signal(signal.SIGUSR1, request_close)
+    for signal_name in ("SIGTERM", "SIGINT"):
+        if hasattr(signal, signal_name):
+            signal.signal(getattr(signal, signal_name), request_close)
+    if os.name == "nt":
+        def poll_toggle_request():
+            if instance_lock.toggle_requested():
+                window.close()
+                return False
+            return True
+        GLib.timeout_add(200, poll_toggle_request)
     window.show_focused()
     try:
         Gtk.main()

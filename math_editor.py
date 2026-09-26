@@ -4,10 +4,17 @@ gi.require_version("Gtk", "3.0"); gi.require_version("Gdk", "3.0")
 try:
     gi.require_version("WebKit2", "4.1")
 except ValueError:
-    gi.require_version("WebKit2", "4.0")
-from gi.repository import Gdk, Gtk, WebKit2
+    try:
+        gi.require_version("WebKit2", "4.0")
+    except ValueError:
+        pass
+from gi.repository import Gdk, Gtk
+try:
+    from gi.repository import WebKit2
+except (ImportError, ValueError):
+    WebKit2 = None
 import json
-import os
+from pathlib import Path
 
 
 class Node:
@@ -109,7 +116,7 @@ class Parser:
 class MathEditor(Gtk.DrawingArea):
     """Editable expression canvas with the subset of Gtk.Entry API the app uses."""
     def __init__(self):
-        super().__init__(); self.text=""; self.cursor=0; self.selection=None
+        super().__init__(); self.text=""; self.cursor=0; self.selection=None; self.history=[]
         self.set_name("math_editor"); self.set_size_request(-1,100); self.set_can_focus(True)
         self.connect("draw",self.on_draw); self.connect("key-press-event",self.on_key); self.connect("button-press-event",lambda *_: self.grab_focus())
         self.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)
@@ -117,14 +124,42 @@ class MathEditor(Gtk.DrawingArea):
     def set_alignment(self,_): pass
     def connect_activate(self,callback): self.activate_callback=callback
     def get_text(self): return self.text
-    def set_text(self,text): self.text=text; self.cursor=len(text); self.selection=None; self.queue_draw()
+    def set_text(self,text): self.text=text; self.cursor=len(text); self.selection=None; self.history=[]; self.queue_draw()
     def get_position(self): return self.cursor
     def set_position(self,pos): self.cursor=max(0,min(len(self.text),pos)); self.selection=None; self.queue_draw()
     def get_selection_bounds(self): return self.selection or ()
     def select_region(self,start,end): self.selection=(start,end); self.cursor=end; self.queue_draw()
-    def delete_text(self,start,end): self.text=self.text[:start]+self.text[end:]; self.cursor=start; self.selection=None; self.queue_draw()
-    def insert_text(self,value,position): self.text=self.text[:position]+value+self.text[position:]; self.cursor=position+len(value); self.queue_draw()
+    def _remember(self):
+        self.history.append((self.text,self.cursor));self.history=self.history[-100:]
+    def delete_text(self,start,end): self._remember();self.text=self.text[:start]+self.text[end:]; self.cursor=start; self.selection=None; self.queue_draw()
+    def insert_text(self,value,position): self._remember();self.text=self.text[:position]+value+self.text[position:]; self.cursor=position+len(value); self.queue_draw()
+    def clear(self): self.set_text("")
+    def insert_math(self,latex):
+        templates={
+            r"\sin(#0)":"sin(□)",r"\cos(#0)":"cos(□)",r"\tan(#0)":"tan(□)",r"\pi":"π",
+            r"\arcsin(#0)":"asin(□)",r"\arccos(#0)":"acos(□)",r"\arctan(#0)":"atan(□)",
+            r"\ln(#0)":"ln(□)",r"\log(#0)":"log(□)",r"\sqrt{#0}":"√(□)",
+            r"\sqrt[3]{#0}":"∛(□)",r"\sqrt[#0]{#1}":"root(□,□)",r"\frac{#0}{#1}":"(□)/(□)",
+            r"^{#0}":"^□",r"\operatorname{factorial}(#0)":"factorial(□)",
+            r"\int_{#1}^{#2}#0\,\mathrm{d}x":"integral(□,□,□)",
+            r"\left.\frac{\mathrm{d}}{\mathrm{d}x}#0\right|_{x=#1}":"derivative(□,□)",
+            r"\sum_{x=#1}^{#2}#0":"summation(□,□,□)",r"\left|#0\right|":"abs(□)",
+            r"\log_{#0}(#1)":"logbase(□,□)",
+        }
+        value=templates.get(latex,latex);self.insert_text(value,self.cursor);self.move_slot(1)
+    def move_slot(self,direction):
+        if not self.text:return
+        if direction>0:
+            position=self.text.find("□",self.cursor)
+            if position<0:position=self.text.find("□")
+        else:
+            position=self.text.rfind("□",0,max(0,self.cursor-1))
+            if position<0:position=self.text.rfind("□")
+        if position>=0:self.select_region(position,position+1)
+    def undo(self):
+        if self.history:self.text,self.cursor=self.history.pop();self.selection=None;self.queue_draw()
     def on_key(self,_widget,event):
+        if event.state & Gdk.ModifierType.CONTROL_MASK and event.keyval in (Gdk.KEY_z,Gdk.KEY_Z): self.undo();return True
         if event.keyval in (Gdk.KEY_Return,Gdk.KEY_KP_Enter):
             if hasattr(self,"activate_callback"): self.activate_callback(self)
             return True
@@ -140,6 +175,9 @@ class MathEditor(Gtk.DrawingArea):
         return False
 
 
+CanvasMathEditor = MathEditor
+
+
 class StructuredMathEditor(Gtk.Box):
     """MathLive-backed expression-tree editor embedded in WebKitGTK."""
     def __init__(self):
@@ -153,8 +191,8 @@ class StructuredMathEditor(Gtk.Box):
         self.ready = False; self.pending_value = None; self.webview.connect("load-changed", self._load_changed)
         self.webview.set_size_request(-1, 112); self.webview.set_background_color(Gdk.RGBA(0.18, 0.18, 0.18, 1))
         settings = self.webview.get_settings(); settings.set_enable_javascript(True); settings.set_enable_write_console_messages_to_stdout(False)
-        html_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "math_editor.html")
-        self.webview.load_uri("file://" + html_path); self.pack_start(self.webview, True, True, 0)
+        html_path = Path(__file__).resolve().with_name("math_editor.html")
+        self.webview.load_uri(html_path.as_uri()); self.pack_start(self.webview, True, True, 0)
     def _changed(self, _manager, result): self.value = result.get_js_value().to_string()
     def _activate(self, *_args):
         if self.activate_callback: self.activate_callback(self)
@@ -177,6 +215,6 @@ class StructuredMathEditor(Gtk.Box):
     def _js(self, expression): self.webview.run_javascript(expression, None, None, None)
 
 
-# Public editor used by the application. The original canvas classes remain only
-# as dependency-free fallback code; all live editing uses the structured field.
-MathEditor = StructuredMathEditor
+# WebKitGTK is not distributed for native Windows by MSYS2.  Retain the richer
+# MathLive editor where available and use the GTK/Cairo editor everywhere else.
+MathEditor = StructuredMathEditor if WebKit2 is not None else CanvasMathEditor

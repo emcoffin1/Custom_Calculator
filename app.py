@@ -8,6 +8,7 @@ import re
 import sys
 import tempfile
 import getpass
+from decimal import Decimal
 from itertools import product
 try:
     import fcntl
@@ -24,7 +25,7 @@ from gi.repository import Gdk, GLib, GObject, Gtk, Pango
 from calculator import evaluate, format_engineering, format_measurement, format_number
 from components import preferred_summary
 from conversions import CATEGORIES, convert, parse_conversion_input
-from engineering import AUTO_UNIT, DISCIPLINES, UNITS, best_unit, calculations_for, description_for, from_base, network_equivalents, nozzle_exit_state, pcb_width, presets_for, rc_filter_response, reference_for, series_rlc_response, standard_atmosphere, to_base as engineering_to_base, validate_inputs, wardogs_solution, warnings_for, wire_drop, wire_gauge_chart
+from engineering import AUTO_UNIT, DISCIPLINES, UNITS, best_unit, calculations_for, combinations_count, description_for, from_base, network_equivalents, nozzle_exit_state, pcb_width, presets_for, rc_filter_response, reference_for, series_rlc_response, standard_atmosphere, to_base as engineering_to_base, validate_inputs, wardogs_solution, warnings_for, wire_drop, wire_gauge_chart
 from features import HistoryEntry, add_history, is_favorite, normalize_state, normalized_precision, search_items, toggle_favorite
 from math_editor import MathEditor
 from quantities import parse_any_quantity, parse_quantity as parse_engineering_quantity
@@ -38,7 +39,7 @@ else:
 DEFAULT_STATE_FILE = os.path.join(CONFIG_HOME, "conversions-calculator", "state.json")
 STATE_FILE = os.environ.get("CONVERSIONS_CALCULATOR_STATE", DEFAULT_STATE_FILE)
 LEGACY_STATE_FILE = os.path.join(APP_DIR, "state.json")
-CUSTOM_LIVE_CALCULATIONS = {"PCB traces", "Wire sizing & voltage drop", "Isentropic flow", "Series / parallel resistance", "Series / parallel capacitance", "Series / parallel inductance", "Series / parallel thermal resistance", "Preferred resistor value", "Preferred capacitor value", "Series RLC impedance", "RC filter response", "Nozzle exit state", "Standard atmosphere", "WarDogs", "Combinations (nCr)"}
+CUSTOM_LIVE_CALCULATIONS = {"PCB traces", "Wire sizing & voltage drop", "Isentropic flow", "Series / parallel resistance", "Series / parallel capacitance", "Series / parallel inductance", "Series / parallel thermal resistance", "Preferred resistor value", "Preferred capacitor value", "Series RLC impedance", "RC filter response", "Nozzle exit state", "Standard atmosphere", "WarDogs", "Combinations (nCr)", "Ordered vs unordered selections"}
 ENGINEERING_GROUPS = ("Favorites",) + tuple(DISCIPLINES)
 RESERVED_MATH_NAMES = {"pi","e","x","sqrt","cbrt","root","factorial","sin","cos","tan","asin","acos","atan","ln","log","log10","log2","logbase","exp","abs","floor","ceil","degrees","radians","gcd","integral","derivative","summation"}
 
@@ -634,14 +635,20 @@ class CalculatorWindow(Gtk.Window):
             for entry,_unit,_spec in self.engineering_fields.values():
                 entry.get_style_context().remove_class("invalid-entry");entry.set_tooltip_text(None)
             calculation = self.current_engineering_calculation
-            if calculation.name == "Combinations (nCr)":
+            if calculation.name in ("Combinations (nCr)", "Ordered vs unordered selections"):
                 values = {key: entry.get_text().strip() for key, (entry, _unit, _spec) in self.engineering_fields.items()}
                 if not all(values.values()):
                     self.set_engineering_result("Enter total items (n) and items chosen (r)", "neutral")
                     return
                 # Keep counts and results exact, bypassing measurement float conversion.
                 answer = calculation.compute(values)
-                self.set_engineering_result(f"Combinations: {answer}", "live")
+                if calculation.name == "Ordered vs unordered selections":
+                    unordered = combinations_count(values["n"], values["r"])
+                    # Decimal formats large integers without Python's integer-string digit limit.
+                    text = f"Unordered (combinations): {unordered}\nOrdered (permutations): {Decimal(answer):f}"
+                else:
+                    text = f"Combinations: {answer}"
+                self.set_engineering_result(text, "live")
                 return
             if calculation.name == "WarDogs":
                 if any(not entry.get_text().strip() for entry,_unit,_spec in self.engineering_fields.values()):

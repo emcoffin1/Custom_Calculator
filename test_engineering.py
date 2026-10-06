@@ -3,6 +3,19 @@ import unittest
 from engineering import best_unit, calculations_for, from_base, network_equivalents, nozzle_exit_state, pcb_width, presets_for, rc_filter_response, recommend_awg, series_rlc_response, standard_atmosphere, to_base, wardogs_solution, warnings_for, wire_drop, wire_gauge_chart
 
 class EngineeringTests(unittest.TestCase):
+    def test_ordered_vs_unordered_counts(self):
+        ordered = self.calculation("General", "Ordered vs unordered selections")
+        unordered = self.calculation("General", "Combinations (nCr)")
+        for n, r, expected in ((5, 2, 20), (0, 0, 1), (5, 0, 1), (5, 5, 120), (52, 5, 311875200)):
+            with self.subTest(n=n, r=r):
+                values = {"n": str(n), "r": str(r)}
+                self.assertEqual(ordered.compute(values), expected)
+                self.assertEqual(expected, unordered.compute(values) * math.factorial(r))
+        self.assertEqual(ordered.compute({"n": 10000, "r": 10000}), math.factorial(10000))
+        for n, r in ((5, 6), (-1, 0), (5, "2.5"), (10001, 0)):
+            with self.subTest(n=n, r=r), self.assertRaises(ValueError):
+                ordered.compute({"n": n, "r": r})
+
     def test_combinations_exact_counts(self):
         calc = self.calculation("General", "Combinations (nCr)")
         for n, r, expected in ((5, 2, 10), (52, 5, 2598960), (0, 0, 1),

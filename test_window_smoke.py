@@ -46,6 +46,19 @@ class WindowSmokeTests(unittest.TestCase):
         n.set_text("0"); r.set_text("0")
         self.assertEqual(w.engineering_result.get_text(), "Combinations: 1")
 
+    def test_ordered_vs_unordered_live_results(self):
+        w = self.window
+        self.pick(w.engineering_discipline, "General")
+        self.pick(w.engineering_calculation, "Ordered vs unordered selections")
+        n = w.engineering_fields["n"][0]; r = w.engineering_fields["r"][0]
+        n.set_text("5"); r.set_text("2")
+        self.assertEqual(w.engineering_result.get_text(), "Unordered (combinations): 10\nOrdered (permutations): 20")
+        r.set_text("6")
+        self.assertIn("cannot exceed", w.engineering_result.get_text())
+        n.set_text("10000"); r.set_text("10000")
+        self.assertTrue(w.engineering_result.get_text().startswith("Unordered (combinations): 1\nOrdered (permutations): "))
+        self.assertGreater(len(w.engineering_result.get_text()), 35000)
+
     def test_unit_math_and_wire_chart(self):
         w=self.window;w.basic_expression.set_text("12 V / 220 Ω");w.calculate_math(w.basic_expression,w.basic_result)
         self.assertEqual(w.basic_result.get_text(),"54.5455 mA")

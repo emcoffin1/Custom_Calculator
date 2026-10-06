@@ -1,38 +1,35 @@
 import math
 import unittest
-from engineering import best_unit, calculations_for, from_base, network_equivalents, nozzle_exit_state, pcb_width, presets_for, rc_filter_response, recommend_awg, series_rlc_response, standard_atmosphere, to_base, wardogs_solution, warnings_for, wire_drop, wire_gauge_chart
+from engineering import best_unit, calculations_for, combinations_count, from_base, network_equivalents, nozzle_exit_state, pcb_width, presets_for, rc_filter_response, recommend_awg, series_rlc_response, standard_atmosphere, to_base, wardogs_solution, warnings_for, wire_drop, wire_gauge_chart
 
 class EngineeringTests(unittest.TestCase):
     def test_ordered_vs_unordered_counts(self):
-        ordered = self.calculation("General", "Ordered vs unordered selections")
-        unordered = self.calculation("General", "Combinations (nCr)")
+        ordered = self.calculation("General", "Ordered vs unordered combinations")
         for n, r, expected in ((5, 2, 20), (0, 0, 1), (5, 0, 1), (5, 5, 120), (52, 5, 311875200)):
             with self.subTest(n=n, r=r):
                 values = {"n": str(n), "r": str(r)}
                 self.assertEqual(ordered.compute(values), expected)
-                self.assertEqual(expected, unordered.compute(values) * math.factorial(r))
+                self.assertEqual(expected, combinations_count(n, r) * math.factorial(r))
         self.assertEqual(ordered.compute({"n": 10000, "r": 10000}), math.factorial(10000))
         for n, r in ((5, 6), (-1, 0), (5, "2.5"), (10001, 0)):
             with self.subTest(n=n, r=r), self.assertRaises(ValueError):
                 ordered.compute({"n": n, "r": r})
 
     def test_combinations_exact_counts(self):
-        calc = self.calculation("General", "Combinations (nCr)")
         for n, r, expected in ((5, 2, 10), (52, 5, 2598960), (0, 0, 1),
                                (10, 0, 1), (10, 10, 1), (100, 50, 100891344545564193334812497256)):
             with self.subTest(n=n, r=r):
-                self.assertEqual(calc.compute({"n": str(n), "r": str(r)}), expected)
-        self.assertEqual(calc.compute({"n": 10000, "r": 1}), 10000)
-        self.assertEqual(calc.compute({"n": 10, "r": 3}), calc.compute({"n": 10, "r": 7}))
+                self.assertEqual(combinations_count(str(n), str(r)), expected)
+        self.assertEqual(combinations_count(10000, 1), 10000)
+        self.assertEqual(combinations_count(10, 3), combinations_count(10, 7))
 
     def test_combinations_reject_invalid_counts(self):
-        calc = self.calculation("General", "Combinations (nCr)")
         for n, r in ((-1, 0), (5, -1), (5, 6), (5.5, 2), (5, 2.5),
                      ("5.0000000000000001", 2), ("NaN", 1), ("Infinity", 1),
                      (10001, 1), (5, "2 ±1"), ("", 0), ("abc", 0)):
             with self.subTest(n=n, r=r):
                 with self.assertRaises(ValueError):
-                    calc.compute({"n": n, "r": r})
+                    combinations_count(n, r)
 
     def test_automatic_si_unit_scaling(self):
         self.assertEqual(best_unit(.0047,"current"),"mA")

@@ -39,7 +39,7 @@ else:
 DEFAULT_STATE_FILE = os.path.join(CONFIG_HOME, "conversions-calculator", "state.json")
 STATE_FILE = os.environ.get("CONVERSIONS_CALCULATOR_STATE", DEFAULT_STATE_FILE)
 LEGACY_STATE_FILE = os.path.join(APP_DIR, "state.json")
-CUSTOM_LIVE_CALCULATIONS = {"PCB traces", "Wire sizing & voltage drop", "Isentropic flow", "Series / parallel resistance", "Series / parallel capacitance", "Series / parallel inductance", "Series / parallel thermal resistance", "Preferred resistor value", "Preferred capacitor value", "Series RLC impedance", "RC filter response", "Nozzle exit state", "Standard atmosphere", "WarDogs", "Combinations (nCr)", "Ordered vs unordered selections"}
+CUSTOM_LIVE_CALCULATIONS = {"PCB traces", "Wire sizing & voltage drop", "Isentropic flow", "Series / parallel resistance", "Series / parallel capacitance", "Series / parallel inductance", "Series / parallel thermal resistance", "Preferred resistor value", "Preferred capacitor value", "Series RLC impedance", "RC filter response", "Nozzle exit state", "Standard atmosphere", "WarDogs", "Ordered vs unordered combinations"}
 ENGINEERING_GROUPS = ("Favorites",) + tuple(DISCIPLINES)
 RESERVED_MATH_NAMES = {"pi","e","x","sqrt","cbrt","root","factorial","sin","cos","tan","asin","acos","atan","ln","log","log10","log2","logbase","exp","abs","floor","ceil","degrees","radians","gcd","integral","derivative","summation"}
 
@@ -635,19 +635,16 @@ class CalculatorWindow(Gtk.Window):
             for entry,_unit,_spec in self.engineering_fields.values():
                 entry.get_style_context().remove_class("invalid-entry");entry.set_tooltip_text(None)
             calculation = self.current_engineering_calculation
-            if calculation.name in ("Combinations (nCr)", "Ordered vs unordered selections"):
+            if calculation.name == "Ordered vs unordered combinations":
                 values = {key: entry.get_text().strip() for key, (entry, _unit, _spec) in self.engineering_fields.items()}
                 if not all(values.values()):
                     self.set_engineering_result("Enter total items (n) and items chosen (r)", "neutral")
                     return
                 # Keep counts and results exact, bypassing measurement float conversion.
                 answer = calculation.compute(values)
-                if calculation.name == "Ordered vs unordered selections":
-                    unordered = combinations_count(values["n"], values["r"])
-                    # Decimal formats large integers without Python's integer-string digit limit.
-                    text = f"Unordered (combinations): {unordered}\nOrdered (permutations): {Decimal(answer):f}"
-                else:
-                    text = f"Combinations: {answer}"
+                unordered = combinations_count(values["n"], values["r"])
+                # Decimal formats large integers without Python's integer-string digit limit.
+                text = f"Unordered (combinations): {unordered}\nOrdered (permutations): {Decimal(answer):f}"
                 self.set_engineering_result(text, "live")
                 return
             if calculation.name == "WarDogs":

@@ -33,10 +33,10 @@ class WindowSmokeTests(unittest.TestCase):
     def test_combinations_live_exact_and_validation(self):
         w = self.window
         self.pick(w.engineering_discipline, "General")
-        self.pick(w.engineering_calculation, "Combinations (nCr)")
+        self.pick(w.engineering_calculation, "Ordered vs unordered combinations")
         n = w.engineering_fields["n"][0]; r = w.engineering_fields["r"][0]
         n.set_text("100"); r.set_text("50")
-        self.assertEqual(w.engineering_result.get_text(), "Combinations: 100891344545564193334812497256")
+        self.assertTrue(w.engineering_result.get_text().startswith("Unordered (combinations): 100891344545564193334812497256\n"))
         r.set_text("101")
         self.assertIn("cannot exceed", w.engineering_result.get_text())
         r.set_text("2.5")
@@ -44,12 +44,12 @@ class WindowSmokeTests(unittest.TestCase):
         r.set_text("")
         self.assertIn("Enter total items", w.engineering_result.get_text())
         n.set_text("0"); r.set_text("0")
-        self.assertEqual(w.engineering_result.get_text(), "Combinations: 1")
+        self.assertEqual(w.engineering_result.get_text(), "Unordered (combinations): 1\nOrdered (permutations): 1")
 
     def test_ordered_vs_unordered_live_results(self):
         w = self.window
         self.pick(w.engineering_discipline, "General")
-        self.pick(w.engineering_calculation, "Ordered vs unordered selections")
+        self.pick(w.engineering_calculation, "Ordered vs unordered combinations")
         n = w.engineering_fields["n"][0]; r = w.engineering_fields["r"][0]
         n.set_text("5"); r.set_text("2")
         self.assertEqual(w.engineering_result.get_text(), "Unordered (combinations): 10\nOrdered (permutations): 20")

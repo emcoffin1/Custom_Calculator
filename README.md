@@ -66,13 +66,11 @@ The selected tab, conversion dropdowns, and Engineering discipline/calculation/i
 
 Switching tabs immediately focuses that tab's primary input.
 
-The Engineering tab provides unit-aware Electrical, Mechanical, Structural, Fluids, Thermal, General, and Propulsion calculations. Its searchable data-driven registry currently contains 91 tools. Values are converted to coherent SI units internally, then displayed in the selected output unit.
+The Engineering tab provides unit-aware Electrical, Mechanical, Structural, Fluids, Thermal, General, and Propulsion calculations. Its searchable data-driven registry currently contains 90 tools. Values are converted to coherent SI units internally, then displayed in the selected output unit.
 
 Electrical tools include a combined external/internal IPC-2221 PCB trace page with a default 10 °C rise and optional automatic resistance, plus a live copper AWG/voltage-drop page. Propulsion is an Engineering discipline containing ideal-gas isentropic flow ratios, area ratio, static conditions, speed of sound, and velocity. A top-level switch controls whether entered values persist; tabs, dropdowns, and units always persist.
 
-General includes **Combinations (nCr)**: enter the total number of distinct items (n) and the number to choose (r). Order does not matter and repetition is not allowed; for example, 5 choose 2 gives 10. Results update live and display exact integers. Inputs must be whole numbers with 0 ≤ r ≤ n ≤ 10000.
-
-**Ordered vs unordered selections** compares both counts for the same n and r: unordered combinations treat AB and BA as the same selection, while ordered permutations count them separately. For 5 items taken 2 at a time, the results are 10 unordered and 20 ordered. Both exclude repetition and use the same input limits.
+General includes **Ordered vs unordered combinations**: enter the total number of distinct items (n) and the number to choose (r). Unordered combinations treat AB and BA as the same selection, while ordered permutations count them separately. For 5 items taken 2 at a time, the results are 10 unordered and 20 ordered. Both exclude repetition. Results update live and display exact integers. Inputs must be whole numbers with 0 ≤ r ≤ n ≤ 10000.
 
 The Wire page includes a compact scrollable AWG reference popover with diameter, area, copper resistance at 20 °C, and the calculator's screening-current estimate. The estimate is not a universal ampacity; installation conditions and applicable code still govern conductor selection.
 

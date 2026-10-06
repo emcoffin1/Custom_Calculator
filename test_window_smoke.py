@@ -30,6 +30,22 @@ class WindowSmokeTests(unittest.TestCase):
         self.pick(w.engineering_discipline,"Favorites")
         self.assertIn("Ohm’s law",[w.engineering_calculation.get_model()[i][0] for i in range(len(w.engineering_calculation.get_model()))])
 
+    def test_combinations_live_exact_and_validation(self):
+        w = self.window
+        self.pick(w.engineering_discipline, "General")
+        self.pick(w.engineering_calculation, "Combinations (nCr)")
+        n = w.engineering_fields["n"][0]; r = w.engineering_fields["r"][0]
+        n.set_text("100"); r.set_text("50")
+        self.assertEqual(w.engineering_result.get_text(), "Combinations: 100891344545564193334812497256")
+        r.set_text("101")
+        self.assertIn("cannot exceed", w.engineering_result.get_text())
+        r.set_text("2.5")
+        self.assertIn("whole number", w.engineering_result.get_text())
+        r.set_text("")
+        self.assertIn("Enter total items", w.engineering_result.get_text())
+        n.set_text("0"); r.set_text("0")
+        self.assertEqual(w.engineering_result.get_text(), "Combinations: 1")
+
     def test_unit_math_and_wire_chart(self):
         w=self.window;w.basic_expression.set_text("12 V / 220 Ω");w.calculate_math(w.basic_expression,w.basic_result)
         self.assertEqual(w.basic_result.get_text(),"54.5455 mA")

@@ -38,7 +38,7 @@ else:
 DEFAULT_STATE_FILE = os.path.join(CONFIG_HOME, "conversions-calculator", "state.json")
 STATE_FILE = os.environ.get("CONVERSIONS_CALCULATOR_STATE", DEFAULT_STATE_FILE)
 LEGACY_STATE_FILE = os.path.join(APP_DIR, "state.json")
-CUSTOM_LIVE_CALCULATIONS = {"PCB traces", "Wire sizing & voltage drop", "Isentropic flow", "Series / parallel resistance", "Series / parallel capacitance", "Series / parallel inductance", "Series / parallel thermal resistance", "Preferred resistor value", "Preferred capacitor value", "Series RLC impedance", "RC filter response", "Nozzle exit state", "Standard atmosphere", "WarDogs"}
+CUSTOM_LIVE_CALCULATIONS = {"PCB traces", "Wire sizing & voltage drop", "Isentropic flow", "Series / parallel resistance", "Series / parallel capacitance", "Series / parallel inductance", "Series / parallel thermal resistance", "Preferred resistor value", "Preferred capacitor value", "Series RLC impedance", "RC filter response", "Nozzle exit state", "Standard atmosphere", "WarDogs", "Combinations (nCr)"}
 ENGINEERING_GROUPS = ("Favorites",) + tuple(DISCIPLINES)
 RESERVED_MATH_NAMES = {"pi","e","x","sqrt","cbrt","root","factorial","sin","cos","tan","asin","acos","atan","ln","log","log10","log2","logbase","exp","abs","floor","ceil","degrees","radians","gcd","integral","derivative","summation"}
 
@@ -531,7 +531,7 @@ class CalculatorWindow(Gtk.Window):
         self.engineering_info.add(info_box);box.pack_start(self.engineering_info,False,False,0)
         self.engineering_inputs_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6); box.pack_start(self.engineering_inputs_box, False, False, 0)
         output_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        self.engineering_result = Gtk.Label(label="Result: —"); self.engineering_result.set_xalign(0); self.engineering_result.set_selectable(True);self.engineering_result.set_line_wrap(True);self.engineering_result.set_max_width_chars(44); self.engineering_result.get_style_context().add_class("engineering-result")
+        self.engineering_result = Gtk.Label(label="Result: —"); self.engineering_result.set_xalign(0); self.engineering_result.set_selectable(True);self.engineering_result.set_line_wrap(True);self.engineering_result.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR);self.engineering_result.set_max_width_chars(44); self.engineering_result.get_style_context().add_class("engineering-result")
         self.engineering_output_unit = ClickOnlyComboBoxText(); output_row.pack_start(self.copyable(self.engineering_result), True, True, 0); output_row.pack_end(self.engineering_output_unit, False, False, 0); box.pack_start(output_row, False, False, 4)
         self.engineering_warning=Gtk.Label();self.engineering_warning.set_xalign(0);self.engineering_warning.set_line_wrap(True);self.engineering_warning.get_style_context().add_class("engineering-warning");box.pack_start(self.engineering_warning,False,False,0)
         self.engineering_actions = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8); box.pack_start(self.engineering_actions, False, False, 0)
@@ -634,6 +634,15 @@ class CalculatorWindow(Gtk.Window):
             for entry,_unit,_spec in self.engineering_fields.values():
                 entry.get_style_context().remove_class("invalid-entry");entry.set_tooltip_text(None)
             calculation = self.current_engineering_calculation
+            if calculation.name == "Combinations (nCr)":
+                values = {key: entry.get_text().strip() for key, (entry, _unit, _spec) in self.engineering_fields.items()}
+                if not all(values.values()):
+                    self.set_engineering_result("Enter total items (n) and items chosen (r)", "neutral")
+                    return
+                # Keep counts and results exact, bypassing measurement float conversion.
+                answer = calculation.compute(values)
+                self.set_engineering_result(f"Combinations: {answer}", "live")
+                return
             if calculation.name == "WarDogs":
                 if any(not entry.get_text().strip() for entry,_unit,_spec in self.engineering_fields.values()):
                     self.set_engineering_result("Enter all Mortar and Target coordinates", "neutral");return

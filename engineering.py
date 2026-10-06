@@ -1,5 +1,6 @@
 """Unit-aware engineering calculation registry."""
 from dataclasses import dataclass
+from decimal import Decimal, InvalidOperation
 import math
 from quantities import parse_quantity
 
@@ -74,6 +75,24 @@ class Calculation:
 
 def I(key,label,dimension="none",default="",default_unit=""): return Input(key,label,dimension,default,default_unit)
 def C(d,n,f,inputs,out,dim,fn,note="",actions=(),solvers=None): return Calculation(d,n,f,tuple(inputs),out,dim,fn,note,tuple(actions),solvers)
+
+def combinations_count(n, r):
+    """Count unordered selections without repetition, using exact integers."""
+    counts = []
+    for label, raw in (("Total items (n)", n), ("Items chosen (r)", r)):
+        try:
+            value = Decimal(str(raw).strip())
+        except InvalidOperation:
+            raise ValueError(f"{label} must be a nonnegative whole number") from None
+        if not value.is_finite() or value < 0 or value != value.to_integral_value():
+            raise ValueError(f"{label} must be a nonnegative whole number")
+        if value > 10000:
+            raise ValueError(f"{label} must be at most 10000")
+        counts.append(int(value))
+    n, r = counts
+    if r > n:
+        raise ValueError("Items chosen (r) cannot exceed total items (n)")
+    return math.comb(n, r)
 
 def pcb_width(values, k):
     area_mil2=(values["current"]/(k*values["rise"]**.44))**(1/.725)
@@ -219,6 +238,7 @@ CALCULATIONS = [
  C("Thermal","Enclosure temperature rise","ΔT = Q/(UA)",[I("heat","Internal heat load","power"),I("coefficient","Overall heat-transfer coefficient","heat_transfer_coefficient"),I("area","Effective enclosure area","area")],"Temperature rise","temp_delta",lambda v:v["heat"]/(v["coefficient"]*v["area"]),"Simplified steady-state lumped model; solar load, internal gradients, openings, and radiation may dominate."),
  C("Thermal","Series / parallel thermal resistance","Series: Rθ = ΣRθᵢ   ·   Parallel: Rθ = 1/Σ(1/Rθᵢ)",[I("values","Thermal resistances (comma-separated)","thermal_resistance")],"Thermal resistance","thermal_resistance",lambda v:0,"Lumped steady-state paths; parallel elements must connect the same two temperature nodes."),
  C("General","Linear interpolation","y = y₁+(x−x₁)(y₂−y₁)/(x₂−x₁)",[I("x","x"),I("x1","x₁"),I("y1","y₁"),I("x2","x₂"),I("y2","y₂")],"Interpolated value","none",lambda v:v["y1"]+(v["x"]-v["x1"])*(v["y2"]-v["y1"])/(v["x2"]-v["x1"])),
+ C("General","Combinations (nCr)","C(n, r) = n! / (r! × (n − r)!)",[I("n","Total items (n)"),I("r","Items chosen (r)")],"Combinations","none",lambda v:combinations_count(v["n"],v["r"]),"Choose r items from n distinct items. Order does not matter; repetition is not allowed. Enter whole numbers with 0 ≤ r ≤ n ≤ 10000. Example: choosing 2 of 5 gives 10 combinations. Results are exact."),
  C("General","Vector magnitude","|v| = √(x²+y²+z²)",[I("x","x component"),I("y","y component"),I("z","z component","none","0")],"Magnitude","none",lambda v:math.sqrt(v["x"]**2+v["y"]**2+v["z"]**2)),
  C("General","Circle area","A = πr²",[I("a","Area","area"),I("r","Radius","length")],"Area","area",lambda v:math.pi*v["r"]**2,solvers={"a":lambda v:math.pi*v["r"]**2,"r":lambda v:math.sqrt(v["a"]/math.pi)}),
  C("General","WarDogs","d = 100 × √((xₜ−xₘ)²+(yₜ−yₘ)²) m; bearing = 90° − atan2(yₜ−yₘ, xₜ−xₘ)",[I("mortar_x","Mortar X"),I("mortar_y","Mortar Y"),I("target_x","Target X"),I("target_y","Target Y")],"Distance and bearing","none",lambda v:wardogs_solution(v["mortar_x"],v["mortar_y"],v["target_x"],v["target_y"])["distance"],"Each coordinate unit represents 100 m. Compass bearing is measured clockwise from North and normalized to 0–360°."),

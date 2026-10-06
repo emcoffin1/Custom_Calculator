@@ -3,6 +3,24 @@ import unittest
 from engineering import best_unit, calculations_for, from_base, network_equivalents, nozzle_exit_state, pcb_width, presets_for, rc_filter_response, recommend_awg, series_rlc_response, standard_atmosphere, to_base, wardogs_solution, warnings_for, wire_drop, wire_gauge_chart
 
 class EngineeringTests(unittest.TestCase):
+    def test_combinations_exact_counts(self):
+        calc = self.calculation("General", "Combinations (nCr)")
+        for n, r, expected in ((5, 2, 10), (52, 5, 2598960), (0, 0, 1),
+                               (10, 0, 1), (10, 10, 1), (100, 50, 100891344545564193334812497256)):
+            with self.subTest(n=n, r=r):
+                self.assertEqual(calc.compute({"n": str(n), "r": str(r)}), expected)
+        self.assertEqual(calc.compute({"n": 10000, "r": 1}), 10000)
+        self.assertEqual(calc.compute({"n": 10, "r": 3}), calc.compute({"n": 10, "r": 7}))
+
+    def test_combinations_reject_invalid_counts(self):
+        calc = self.calculation("General", "Combinations (nCr)")
+        for n, r in ((-1, 0), (5, -1), (5, 6), (5.5, 2), (5, 2.5),
+                     ("5.0000000000000001", 2), ("NaN", 1), ("Infinity", 1),
+                     (10001, 1), (5, "2 ±1"), ("", 0), ("abc", 0)):
+            with self.subTest(n=n, r=r):
+                with self.assertRaises(ValueError):
+                    calc.compute({"n": n, "r": r})
+
     def test_automatic_si_unit_scaling(self):
         self.assertEqual(best_unit(.0047,"current"),"mA")
         self.assertEqual(best_unit(4700,"resistance"),"kΩ")
